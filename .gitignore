@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.python-version
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data (large / regenerable) — keep directory structure via .gitkeep
+# CyNER is cited from its official repo; do not republish the corpus.
+data/cyner/*
+!data/cyner/.gitkeep
+data/cyner_raw/
+# Article texts stay unpublished; the manifest CSV is released.
+data/scraped/raw/**
+data/scraped/processed/**
+!data/scraped/raw/.gitkeep
+!data/scraped/processed/.gitkeep
+data/correlation/*.graphml
+data/correlation/*.json
+
+# Models / checkpoints (too large for GitHub; release the saved model separately)
+models/bert_baseline/*
+models/securebert_ner/*
+models/checkpoints/*
+models/_archive*
+!models/**/.gitkeep
+
+# Results: keep the paper's tables and JSON summaries.
+# Drop run logs, prediction dumps, and old archives.
+results/*.log
+results/*.err
+results/_boot_preds.json
+results/_archive*/
+results/_tmp_boot/
+
+# Paper PDFs, the scripts that build them, and the LaTeX build folder
+*.pdf
+build_rev/
+scripts/build_*.py
+cti_platform.zip
+docs/*.docx
+
+# Scrapy
+.scrapy/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Env files (may contain secrets)
+.env
