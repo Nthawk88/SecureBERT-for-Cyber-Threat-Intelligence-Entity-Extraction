@@ -1,0 +1,185 @@
+# =============================================================================
+# Central configuration for the CTI Platform (Improving CTI using SecureBERT)
+# All paths and hyperparameters live here. Do NOT hardcode these elsewhere.
+# =============================================================================
+
+project:
+  name: "cti-securebert"
+  seed: 42                      # default seed; multi-seed runs override this
+  # 10 seeds for statistical validation. The Vulnerability test split holds only
+  # 10 entities, so recall moves in steps of 0.1 and F1 is coarsely quantised;
+  # n=3 left the paired t-test underpowered. The first three are the original
+  # seeds, kept so earlier runs remain comparable.
+  seeds: [42, 123, 456, 789, 1011, 1213, 1415, 1617, 1819, 2021]
+
+# -----------------------------------------------------------------------------
+# Paths (relative to project root)
+# -----------------------------------------------------------------------------
+paths:
+  data_dir: "data"
+  cyner_dir: "data/cyner"
+  cyner_train: "data/cyner/train.conll"
+  cyner_dev: "data/cyner/dev.conll"
+  cyner_test: "data/cyner/test.conll"
+  scraped_raw: "data/scraped/raw"
+  scraped_processed: "data/scraped/processed"
+  correlation_dir: "data/correlation"
+  models_dir: "models"
+  bert_baseline_dir: "models/bert_baseline"
+  securebert_dir: "models/securebert_ner"
+  checkpoints_dir: "models/checkpoints"
+  results_dir: "results"
+
+# -----------------------------------------------------------------------------
+# NER label space (Stream A: CyNER, IOB, 5 entity classes -> 11 tags)
+# -----------------------------------------------------------------------------
+labels:
+  label_list:
+    - "O"
+    - "B-Indicator"
+    - "I-Indicator"
+    - "B-Malware"
+    - "I-Malware"
+    - "B-System"
+    - "I-System"
+    - "B-Organization"
+    - "I-Organization"
+    - "B-Vulnerability"
+    - "I-Vulnerability"
+  # Class of primary scientific interest (worst performer in TSTEM, F1 ~ 0.48)
+  focus_class: "Vulnerability"
+
+# -----------------------------------------------------------------------------
+# Models under comparison (identical training config; see training section)
+# -----------------------------------------------------------------------------
+models:
+  baseline:
+    name: "bert-base-uncased"           # TSTEM replication (general-purpose)
+    is_roberta: false
+    ignore_mismatched_sizes: false
+  roberta:
+    name: "roberta-base"                # control: same architecture/tokenizer family as SecureBERT, general-domain pretraining
+    is_roberta: true
+    ignore_mismatched_sizes: false
+
+  securebert:
+    name: "ehsanaghaei/SecureBERT"      # domain-adapted (RoBERTa-based) hypothesis
+    is_roberta: true
+    ignore_mismatched_sizes: true       # required for the fresh classification head
+
+# -----------------------------------------------------------------------------
+# Tokenisation / label alignment
+# -----------------------------------------------------------------------------
+tokenizer:
+  max_length: 256
+  is_split_into_words: true
+  truncation: true
+  label_all_tokens: false               # only first subword gets the real label
+  ignore_index: -100
+
+# -----------------------------------------------------------------------------
+# Training configuration (identical for ALL models for fair comparison)
+# -----------------------------------------------------------------------------
+training:
+  optimizer: "adamw"
+  learning_rate: 2.0e-5
+  train_batch_size: 16
+  eval_batch_size: 16
+  num_epochs: 5
+  weight_decay: 0.01
+  evaluation_strategy: "epoch"
+  save_strategy: "epoch"
+  load_best_model_at_end: true
+  metric_for_best_model: "f1"
+  greater_is_better: true
+  logging_steps: 50
+  warmup_ratio: 0.0
+
+# -----------------------------------------------------------------------------
+# Focal Loss (primary intervention for class imbalance) -- Lin et al. 2017
+# Applied to BOTH model configurations.
+# -----------------------------------------------------------------------------
+focal_loss:
+  enabled: true
+  alpha: 1.0
+  gamma_grid: [1.0, 2.0, 3.0]           # explore the focusing parameter
+  default_gamma: 2.0
+
+# -----------------------------------------------------------------------------
+# Ablation studies -- run ONLY on the best-performing model.
+# CRITICAL: augmentation/oversampling touch the TRAIN split ONLY.
+# -----------------------------------------------------------------------------
+ablation:
+  class_weighting:
+    enabled: false
+    scheme: "inverse_frequency"
+  oversampling:
+    enabled: false
+    target_class: "Vulnerability"
+    oversample_factor: 3                # train split only
+  augmentation:
+    enabled: false
+    target_class: "Vulnerability"
+    num_augmented: 200                  # train split only
+    cve_template_seed: 42
+
+# -----------------------------------------------------------------------------
+# Phase 1 -- Clear web scraping (Stream B). NOT used for quantitative metrics.
+# -----------------------------------------------------------------------------
+scraping:
+  user_agent: "CTI Research Crawler (academic; contact@university.edu)"
+  robotstxt_obey: true
+  download_delay: 3                     # seconds (2-5 recommended)
+  download_delay_min: 2
+  download_delay_max: 5
+  randomize_download_delay: true
+  concurrent_requests: 4
+  concurrent_requests_per_domain: 1
+  autothrottle_enabled: true
+  articles_per_source: 20               # ~20 articles x 5 sources ~= 100
+  recency_months: 6                     # only last 6 months
+  min_content_chars: 200                # QC filter: drop very short articles
+  output_dir: "data/scraped/raw"
+  sources:
+    - name: "unit42"
+      start_url: "https://unit42.paloaltonetworks.com/"
+      allowed_domains: ["unit42.paloaltonetworks.com"]
+    - name: "talos"
+      start_url: "https://blog.talosintelligence.com/"
+      allowed_domains: ["blog.talosintelligence.com"]
+    - name: "mandiant"
+      start_url: "https://cloud.google.com/blog/topics/threat-intelligence"
+      allowed_domains: ["cloud.google.com"]
+    - name: "crowdstrike"
+      start_url: "https://www.crowdstrike.com/blog/"
+      allowed_domains: ["www.crowdstrike.com"]
+    - name: "bleepingcomputer"
+      start_url: "https://www.bleepingcomputer.com/"
+      allowed_domains: ["www.bleepingcomputer.com"]
+
+# -----------------------------------------------------------------------------
+# Phase 3 -- IoC co-occurrence correlation layer (heuristic, rule-based)
+# -----------------------------------------------------------------------------
+correlation:
+  document_cooccurrence:
+    confidence: 0.85
+  temporal_cooccurrence:
+    window_hours: 24
+    min_confidence: 0.3
+    max_confidence: 0.7                 # decays toward min over the window
+  neo4j:
+    uri: "bolt://localhost:7687"
+    user: "neo4j"
+    password: "ctiresearch"
+    database: "neo4j"
+    node_label: "IOC"
+    rel_type: "CORRELATED"
+
+# -----------------------------------------------------------------------------
+# Evaluation / statistical testing
+# -----------------------------------------------------------------------------
+evaluation:
+  alpha: 0.05                           # significance threshold for paired t-test
+  confusion_matrix: true
+  record_inference_time: true
+  overhead_runs: 5                      # repeats for correlation-layer latency
