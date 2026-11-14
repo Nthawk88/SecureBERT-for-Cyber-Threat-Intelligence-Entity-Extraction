@@ -1,0 +1,450 @@
+\documentclass[conference,a4paper]{IEEEtran}
+% ---------------------------------------------------------------------------
+% Build with pdfLaTeX (e.g., Overleaf, "pdfLaTeX" compiler).  Do NOT load hyperref
+% (IEEE Xplore disallows links/bookmarks in the PDF).  Fonts are Type-1 (Times)
+% and are embedded + subset automatically by pdfTeX.
+% ---------------------------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{textcomp}
+\usepackage{cite}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\renewcommand{\IEEEkeywordsname}{Keywords}
+\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\floatsep}{6pt plus 2pt minus 2pt}
+\setlength{\intextsep}{6pt plus 2pt minus 2pt}
+
+\pagestyle{empty}   % no page numbers, headers, or footers
+\pdfminorversion=5  % PDF 1.5 (Acrobat 6); IEEE Xplore needs >= 1.4, not Acrobat 9 (1.7)
+
+% Starts a second author row, as in the IEEE conference template
+\makeatletter
+\providecommand{\linebreakand}{\end{@IEEEauthorhalign}\hfill\mbox{}\par
+\mbox{}\hfill\begin{@IEEEauthorhalign}}
+\makeatother
+
+\begin{document}
+
+\title{Improving Cyber Threat Intelligence Platform Using SecureBERT}
+
+% ----- AUTHORS (IEEE format: name, department/affiliation, university, city/country, e-mail) -----
+\author{\IEEEauthorblockN{Aurelio Suhartono}
+\IEEEauthorblockA{\textit{Cyber Security}\\
+\textit{Bina Nusantara University}\\
+Jakarta, Indonesia\\
+aurelio.suhartono@binus.ac.id}
+\and
+\IEEEauthorblockN{Dwi Arnanta Saputra}
+\IEEEauthorblockA{\textit{Cyber Security}\\
+\textit{Bina Nusantara University}\\
+Jakarta, Indonesia\\
+dwi.saputra@binus.ac.id}
+\and
+\IEEEauthorblockN{Enrico Patras}
+\IEEEauthorblockA{\textit{Cyber Security}\\
+\textit{Bina Nusantara University}\\
+Jakarta, Indonesia\\
+enrico.patras@binus.ac.id}
+\linebreakand
+\IEEEauthorblockN{Aditya Kurniawan}
+\IEEEauthorblockA{\textit{Computer Science Department}\\
+\textit{Bina Nusantara University}\\
+Jakarta, Indonesia\\
+aditya.kurniawan@binus.ac.id}}
+
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+An open-source Cyber Threat Intelligence (CTI) platform called TSTEM, which has achieved high aggregated named entity recognition (NER) accuracy, but has a low Vulnerability F1 score of only 0.48, and stores Indicators of Compromise (IoCs) in individual records. The purpose of this study is to reproduce the BERT-base NER baseline that was used by TSTEM, and then compare that baseline with the domain adapted SecureBERT on CyNER across 10 different seeds (Vulnerability F1 0.482). Additionally, this study will evaluate 5 different techniques for dealing with class imbalance and develop a new heuristic correlation layer. The results indicate that SecureBERT increased the overall entity F1 score from 0.645 to 0.749 (paired t-test, p=2.6x10\textasciicircum{}-7). Focal Loss cannot fix the minority class, but random oversampling can and it improved SecureBERT's Vulnerability F1 from 0.000 to 0.822. When we used the tuned recipe --- SecureBERT with random oversampling --- it achieved an overall F1 score of 0.768 and a Vulnerability F1 score of 0.783 on the official split. Additionally, when compared to BERT with random oversampling, SecureBERT had higher overall F1, macro F1, and all four majority class scores (all p < 10\textasciicircum{}-4), but both encoders performed similarly for the Vulnerability class. TSTEM's internal protocol (token level scoring, random split) was used to evaluate this recipe; it outperforms TSTEM's published F1 for Malware, Indicator, System, Vulnerability (0.642 vs 0.48), and macro F1 (0.833 vs 0.758), but falls short of TSTEM's published F1 on Organization (0.807 vs 0.84). This correlation layer grouped 1,111 unique IoCs found in 80 clear-web articles into ten campaign communities. The community structure had a modularity value of 0.785, covered 99.9\% of the IoCs, and took an average of 3.8 ms to construct the graph for each article.
+\end{abstract}
+
+\begin{IEEEkeywords}
+cyber threat intelligence, named entity recognition, SecureBERT, class imbalance, oversampling, IoC correlation, community detection.
+\end{IEEEkeywords}
+
+\section*{I. INTRODUCTION}
+
+The integration of Information Technology (IT) and Operational Technology (OT) has significantly expanded the number of potential attack surfaces that exist for adversaries [1]. Incidents like Stuxnet, Colonial Pipeline, and Kaseya VSA demonstrate the extreme harm that can result from attacks on critical infrastructure; these incidents have driven many organizations to implement Cyber Threat Intelligence (CTI), which involves gathering and assessing data regarding ongoing threats [1]. CTI typically appears in the form of Indicators of Compromise (IoCs), including IP addresses, file hashes, URLs, and domains [1]. When this information arrives in time, a Security Operations Center (SOC) can contain an attack before it spreads.
+
+Most CTI platforms currently record attack behavior as individual records. However, Satvat et al. state that a compact description of attack behavior is more valuable than an uncoordinated list of artifacts [2]. If analysts obtain only raw hashes and IP addresses, then they will have to link those disconnected pieces together manually. Without relational context, coordinated attacks will remain unnoticed.
+
+Balasubramanian et al. developed TSTEM, which is a freely available, open-source application that can collect IoCs (Indicators of Compromise) from the visible internet (clear web), the hidden internet (dark web), and social media platforms like Twitter/X. TSTEM uses a combination of microservices, which are run in containers, and transformer-based artificial intelligence models [1]. TSTEM uses BERT to classify short snippets of text, Longformer to classify larger amounts of text such as whole web pages, and BERT-NER to find specific names or other types of entities within the text. While TSTEM has been reported to have very high rates of accuracy (98\% for tweets, 95\% for pages, and 98.74\% for entity recognition category classification), it still has two main limitations.
+
+First, the per-class NER performance is not consistent. Malware achieves F1 of 0.90; Indicator and Organization achieve F1 of 0.84; System achieves F1 of 0.73; however, Vulnerability (CVEs, CWEs, and zero-day references) achieves F1 of 0.48 [1]. The class performance is important when it comes to patching, since a new CVE being reported must be identified as rapidly as possible. The TSTEM authors believe that the reason for this poor performance is due to the lack of training examples of this class in the training dataset and also due to how vulnerabilities are typically described in threat documentation [1]. These two reasons suggest that the authors are using a model that has been modified specifically for their domain and are explicitly addressing the problem of class imbalance.
+
+Second, TSTEM writes every IoC into Elasticsearch as independent records, therefore analysts get a ``list of evidence'' instead of a ``campaign picture'' [2]. At the bottom of Bianco's Pyramid of Pain lie hashes and IP addresses, which can be changed easily by an attacker [4], [5]. Systems like iACE, ChainSmith and TTPDrill extract IoCs or threat actions; however, none of these systems create relationships between entities [2]. EXTRACTOR creates provenance graphs based on threat reports [2]. Currently there are no equivalent systems for creating provenance graphs for a streaming clear-web pipeline like TSTEM [1]. By linking IoCs at the campaign level, defense is moved further up the pyramid, and this is more expensive for an attacker to avoid [4].
+
+This research uses only the ``clear'' web (i.e. the portion of the World Wide Web that can be accessed using standard search engines). The decision to use this part of the web was based on empirical evidence: 73.71 percent of all relevant pages identified in TSTEM were on the clear web [1]. In addition to being more stable and replicable than the ``dark'' web or rate-limited social-media APIs, clear web sources such as security blogs tend to provide more consistent content than tweets or forum posts [1], [6].
+
+Two interventions are designed to close the aforementioned gaps. One intervention uses SecureBERT, which has been adapted to a specific domain [3], as well as a class imbalance strategy for the Vulnerability class. Another intervention is a light weight, heuristic correlation layer that considers both document and temporal co-occurrence. These two interventions provide a mechanism to develop a pipeline where indicators can be collected, and then placed in context.
+
+This study will address two questions. Question \#1: Is there an improvement in the extraction of entities from TSTEM's BERT-base baseline when using a domain-specific encoder with class imbalance mitigation strategies, especially for vulnerability? Question \#2: Can a simple heuristic-based correlation layer help to organize individual IoCs into a structured campaign-level view, at a minimal cost?
+
+The first contribution is to provide a ten-seed replication of the TSTEM NER baseline on CyNER. The second contribution is to compare SecureBERT and BERT-base through a matched comparison, including an ablation of five arms of imbalance. Third, the authors perform an apple-to-apple comparison against the published per-class scores of TSTEM under TSTEM's own evaluation protocol, providing per-seed evidence and performing one-sample tests. Finally, the authors develop a heuristic IoC correlation layer that they evaluate through measurements of coverage, modularity and overhead. Each model was trained using a single NVIDIA RTX 5060 using full 32-bit precision. CyNER is utilized solely for NER evaluations, while the scraped articles are utilized solely for the correlation case study.
+
+\section*{II. RELATED WORK}
+
+\subsection*{2.1 Cyber Threat Intelligence, IoCs, and the Pyramid of Pain}
+
+CTI assists in providing a proactive defense through the description of adversary tactics, techniques, and procedures (TTPs) [7]. Of all units utilized during operations, the most frequently utilized unit is the atomic IoC (Indicator of Compromise): an IP address, hash, URL, or domain that a SOC can match against traffic or files [1]. Bianco's Pyramid of Pain places these artifacts at the base, because rotating an IP or rebuilding a binary defeats any rule tied to that value [4]. Above those artifacts are other units of measurement for threats (tools, behaviors, and campaign tactics); as these units are more difficult for an attacker to change than atomic IoCs, platforms which only collect atomic IoCs do not provide a complete picture of the threat [4].
+
+\subsection*{2.2 The TSTEM Platform and Its Limitations}
+
+TSTEM automates the search, extraction, and indexing of IoCs from the clear web, dark web, and social media [1]. Entity extraction uses BERT-base-uncased fine-tuned on CyNER, plus a rule-based layer for patterned IoCs. BERT is used for classifying short content, while Longformer is used for content that exceeds the 512-token limit of BERT [1]. TSTEM randomly samples a portion of CyNER and then assesses NER based upon token level categorization [1]. There are two areas of deficiency that motivated the creation of this paper: First, the vulnerability F1 score was reported to be only 0.48, which the authors attributed to limited amounts of available training data and complex sentence structure [1]. Second, the IoCs that were extracted were left uncorrelated at the campaign level, and instead were stored in isolation within Elasticsearch [1].
+
+\subsection*{2.3 Domain-Adapted Language Models for Cybersecurity}
+
+The Vulnerability score is not only an imbalance problem; it also reflects a domain gap. bert-base-uncased has very little knowledge of CVEs, exploits, or APTs, in addition to being trained on Wikipedia-type text [1],[8]. There are examples of domain-adaptive pre-training having positive effects in other domains (e.g., BioBERT and SciBERT [8]). SecureBERT is a RoBERTa model that was pre-trained on APT reports, CVE entries, and security blogs [3]; whereas CySecBERT is a BERT model that was pre-trained on a selectively chosen set of security-related articles [8]. This study uses SecureBERT because its pretraining corpus matches the gap in TSTEM; comparisons with CySecBERT and with a general-purpose RoBERTa control are left to future work [8].
+
+\subsection*{2.4 Class Imbalance in Token Classification}
+
+Rare classes in NER can be handled at either the loss or the data level. With Focal Loss, easy/well-classified tokens receive a lower weight; as such, difficult/rare tokens will dominate the gradient [11]. The use of inverse frequency class weighting allows for direct rescaling of the loss. Random oversampling is one way to handle rare classes at the data level by repeating training examples which include the rare class. Another way to do this is with template-based augmentation, where new labeled sentences are created. Both methods have advantages and disadvantages; loss-level methods change how errors are weighted, however they do not create any additional information. On the other hand, data-level methods change how frequently the model observes the rare class. It remains an empirical issue as to which type of technique is more effective for dealing with rare classes (specifically those with only 48 training instances), so Section 3.6 evaluated both families of techniques.
+
+\subsection*{2.5 From Atomic IoCs to Contextualized Threat Knowledge}
+
+CTI pipelines (e.g., TSTEM) generally stop at the point of atomic indexing [1]. It is much easier for an attacker to falsify any individual indicator than relational knowledge (such as the relation between a malware family and a cluster of IP addresses) [4]. Cyber-All-Intel represents these relations through a Vector Knowledge Graph. However, because of the high computational cost of neural relational knowledge extraction, Cyber-All-Intel is not practical for use in a live pipeline [9]. Therefore, in this research, we use heuristics based upon document and temporal co-occurrence that are based on rules, inexpensive to execute, and allow us to convert isolated IoCs into campaign graphs. After converting the IoCs into campaign graphs, we recover the campaigns using LCD, which maximizes Newman modularity [12].
+
+\section*{III. METHODOLOGY}
+
+\subsection*{A. System Architecture}
+
+The pipeline consists of three phases: a crawler on the clear web, a Transformer-based NER module which identifies five categories of CTI entities, and a property graph building phase. Data streams are processed separately. One data stream (Stream A) contains the labeled CyNER dataset. This is the only source used to compute quantitative NER metrics. The second data stream (Stream B) contains the scraped web content. This is the only source used for the correlation case study described in Section IV-H. No un-labeled web content is ever evaluated against the NER performance.
+
+\subsection*{B. Data Collection (Clear-Web Scraping)}
+
+Collection of information on security blogs and vendor advisories is performed. Social media and the ``dark web'' are not included as part of the collection process as defined in Section I and by TSTEM who reported that 73.71 percent of all related pages were found on the ``clear web'' [1], [6]. Each individual source has one Scrapy spider which will be used to extract content from each site. In case there is a difference in how the content is laid out, alternative extractors have been developed to handle these cases. The crawler follows the robots.txt guidelines and waits 2-5 seconds before making another request to the same site. Content extracted from each site is saved as a JSON file containing the following fields: URL, Timestamp, Source, Body. Any content that is too small to be processed, cannot be parsed, or is too old will be discarded immediately. Also, sites which only display listing pages using JavaScript will be bypassed in order to use sources that have server-rendered listing pages.
+
+\subsection*{C. Dataset Preparation (CyNER)}
+
+All quantitative training and evaluation use CyNER [10], the same NER dataset that TSTEM uses [1]. CyNER is drawn from 60 MITRE ATT\&CK software reports and annotated in IOB format for Malware, Indicator, System, Organization, and Vulnerability, which gives eleven tags including the outside class O. The official splits contain 4,372 sentences: train 2,811, development 813, and test 748.
+
+Vulnerability is the minority class. The training split has 48 Vulnerability entities, against 1,021 Indicator, 837 System, 703 Malware, and 284 Organization entities, and the development and test splits have only 9 and 10 Vulnerability entities, respectively. Among the Vulnerability Entities, the training mentions 13 out of 48 CVE identifiers and the rest are descriptive phrases such as ``unpatched vulnerabilities'' or ``privilege escalation exploit''.
+
+In Transformer NER, only the first sub-word in every word has its actual IOB label. Subsequent sub-words and special tokens have an ignore index so they do not contribute to either the loss or the metrics. SecureBERT is built on RoBERTa; thus pre-tokenized inputs are encoded with a prefix space and sequences can be cut off after 256 sub-words
+
+\subsection*{D. NER Model Training}
+
+NER NER is token classification using the 11 IOB labels defined in section III-C. Models were trained on the whole dataset at 32-bit precision using AdamW, a batch size of 16 and a weight decay of 0.01. The model that had the best entity F1 on the development set was chosen. There were two different training setups.
+
+In this study we used a default setting for training our models (5 epochs, learning rate 2 x 10-5). We evaluated three different aspects of our study using the default setting: our evaluation of encoders, our evaluation of imbalances, and our first evaluation of matched oversampling. (Section IV-D).
+
+The tuning of regimes (10 epochs, learning rate 5 $\times$ 10\textminus{}5) for SecureBERT used oversampling from four different options: either 5 or 10 epochs at 2 x 10-5, or 10 epochs at 3 x 10-5 or 5 x 10-5. These options were evaluated based on the average development macro F1 across two seeds. Of the four options, the tuned setting produced a score of 0.799, compared to 0.798 (3 x 10-5), 0.775 (10 epochs at 2 x 10-5) and 0.755 (5 epochs at 2 x 10-5). The test data was not used to select the tuned settings, and each comparison made with tuned settings utilizes the same tuned settings for each of the two encoders.
+
+The main configurations were trained with 10 random seeds (i.e. 42, 123, 456, 789, 1011, 1213, 1415, 1617, 1819, 2021) and the performance was reported using the mean value plus/minus the standard deviation. A three-seed subset is insufficient to draw robust conclusions for the minority class: the test set contains only 10 Vulnerability entities; thus, recall can be evaluated in increments of 0.1 and a subset of three seeds could lead to contradictory findings. However, the ablation study described in Section III-F used the initial three seeds, as the study includes five arms and the differences between those arms were substantial.
+
+Due to the small size of the test split ($\sim$10 instances), minor score variations across runs reflect non-deterministic CUDA operations and seed sensitivity.
+
+\subsection*{E. Model Comparison}
+
+Both models use the exact same settings as outlined in Section III-D. BERT-base-uncased is used as a baseline for TSTEM [1], while Secure-BERT is used as a domain-adapted treatment [3]. There are three treatment groups that are run using all ten seeds in the standard operating environment (i.e., BERT with cross-entropy, BERT with Focal Loss and Secure-BERT with Focal Loss). These two groups allow us to isolate the effects of the different loss functions. In contrast, these two groups also allow us to isolate the effects of the different encoder architectures. Following the removal of the winning imbalance strategy as described in Section III-F, we apply the winning imbalance strategy to both models and then compare them once again on ten seeds in both operating environments. This allows us to determine if Secure-BERT's superiority persists after both models have received the same treatment. The hypothesis is that SecureBERT provides better representations for cybersecurity; however, it remains to be seen if the benefit lies in vulnerability detection.
+
+\subsection*{F. Class-Imbalance Handling}
+
+AAccording to Section III-C, the loss is mainly due to majority labeled samples. Five different settings are examined on SecureBERT, and none were previously considered superior:
+
+1) Cross-Entropy (CE). The standard. Focal Loss [11]. The parameter gamma is set to 2.0 prior to each run in the primary arm. A sweep of gamma in the range of \{1, 2, 3\} was conducted to determine sensitivity, but it was not used to select gamma based on vulnerability F1. 3. Inverse-Frequency Class Weighting. Class weights were determined using the training set. 4. Random Oversampling. For all training examples containing a vulnerability entity, these examples were duplicated k times where k = 3, which resulted in 2,881 training examples. 5. Template Based Data Augmentation. Two hundred automatically labeled, synthetic CVE sentences were added to the training set resulting in 3,011 training examples.
+
+Only the training portion of the data has had oversampling and augmentation applied to it. Both the development and test portions of the data have been left alone. The winning model will be used as our proposed recipe for training, and we will train the final model only once using seed 42 (which is specified within the configuration file). This model will not necessarily have the highest Vulnerability F1 score because selecting the model based on its Vulnerability F1 score would be ``cherry-picking'' a metric whose range of values is from 0.00 to 0.82.
+
+\subsection*{G. Evaluation Protocols and Statistical Testing}
+
+Two types of scoring protocol will be reported due to TSTEM's entity scoring method being different from that used by CyNER for entity scoring. Protocol 1 (P1): Official Split, Entity Level (Primary). The official split of the CyNER test set was scored using seqeval [1] and each entity was counted only when both its span and its type were correct. Precision, recall, and F1 were calculated for each class separately and then averaged using both macro-average and micro-average methods. The official split also maintained all sentences from a single report together.
+
+The P2, TSTEM Protocol (for the purpose of comparing to TSTEM). The 4,372 sentences are randomly split by seed into the same size groups as in the official dataset (2,811/813/748) and every single word is evaluated individually. The B- and I- tags are combined into a single category that corresponds to TSTEM's ``NER category classification'' [1]. In P2, 60\% of test entity strings can be found in the training data, compared to only 33\% in P1. P2 is only utilized for the evaluation against TSTEM's Table 6; as an additional measure, the BERT-base model with cross entropy training achieves 98.46\% token accuracy in P2, while TSTEM achieves 98.74\%.
+
+A paired t-test is used to compare matched arms based on the ten seeds used for this study. Each matched arm is compared at $\alpha$ = 0.05. TSTEM reports scores for each class instead of per seed. Therefore, each of our per class averages were compared to TSTEM using a one sided one sample t-test (H1: Our average > TSTEM). Additionally, the number of seeds that scored higher than TSTEM is provided as well as the exact p-value for each comparison.
+
+\subsection*{3.8 IoC Correlation Layer}
+
+The rule-based layer uses two heuristics to build a property graph rather than using neural networks. Document co-occurrence links entities that appear in the same document with 0.85 confidence. If there are multiple occurrences of document co-occurrence, the edge weight increases. Temporal co-occurrence links entities that appear in different documents published on the same day (within 24 hours), with confidence decreasing from 0.7 to 0.3. Entities without a reliable publication date are not included in temporal edges.
+
+Four filters are used on the indicator values. The indicator values must be formatted as one of the following: IP address, URL, hash, CVE, email, or domain. All indicators with confidence scores less than 0.7 or character lengths less than 3 are removed from consideration. Any string appearing in greater than 20\% of the documents will be removed. The spans will be rebuilt using the maximum aggregation of the subwords. Per-token grouping was rejected due to its splitting of hashes and IPs into multiple parts which were ultimately removed by the length filter; therefore, there were no Indicator nodes remaining in the document (Section 4.8).
+
+Campaigns have been identified through the use of Louvain community detection [12] (resolution 1.0, seed 42). Connected components have also been identified using the same graph as campaign clusters for comparative purposes. All nodes in the graph store their IoC values, types, confidences, first and last seen dates, and source documents. Edges within the graph store their types of evidence (document or temporal), weights, and supporting documents. When there is a running instance, the graph is exported to Neo4j. If not, the graph is exported to GraphML. It is a co-occurrence property graph and does not represent an ontology-based knowledge graph.
+
+\section*{IV. RESULTS AND DISCUSSION}
+
+Quantitative NER uses CyNER only (Stream A). Stream B is used only in Section 4.8.
+
+\subsection*{4.1 Experimental Setup}
+
+The training for each run was performed using a single NVIDIA RTX 5060. The matched arms from Section III-E were trained on ten different seed values. Every run of focal loss uses $\gamma$ = 2.0. When tuned and trained on ten different seeds with oversampling, the training time for SecureBERT took approximately 290 seconds. There are 80 articles in Stream B: 20 from Talos, 20 from CrowdStrike, 19 from BleepingComputer, and 21 from Securelist.
+
+Unit 42 had four articles; the javascript-rendered listings were below the design target of 100 articles. The corpus is not being used in any named entity recognition metrics.
+
+\subsection*{4.2 Baseline Replication and Encoder Comparison}
+
+The BERT-base baseline had similar results to TSTEM on the minority class with its Vulnerability F1 being 0.482 \textpm{} 0.241 (for ten seeds), compared to TSTEM's 0.48 [1]. Macro F1 was 0.588 and overall F1 was 0.645, indicating that the pipeline has a valid starting point.
+
+The encoder loss is shown in Table I. When Focal Loss was applied to BERT, Vulnerability F1 increased to 0.560 \textpm{} 0.115 and overall F1 increased to 0.665, a modest gain. Overall F1 performance of SecureBERT with Focal Loss was the best in terms of stability (0.749 \textpm{} 0.010, as compared to 0.645 \textpm{} 0.022), and it had a Macro F1 score of 0.649. However, the Vulnerability F1 performance of SecureBERT with Focal Loss dropped significantly to 0.307 \textpm{} 0.337. This drop does not represent random variation around a good results. In fact, when using the same configuration, SecureBERT with Focal Loss ranged from 0.000 to 0.824, and four of ten seeds failed predict Vulnerability. With ten test entities, one miss shifts recall by 0.1. A one-seed sweep of $\gamma$ $\in$ \{1, 2, 3\} left overall F1 within 0.738--0.753, so the result is not sensitive to $\gamma$.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.0}
+\caption{TEN-SEED COMPARISON OF THE THREE MATCHED ARMS (P1, DEFAULT REGIME)}
+\label{tab:I}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\columnwidth}{@{}>{\raggedright\arraybackslash}Xccc@{}}
+\toprule
+\textbf{Configuration} & \shortstack{\textbf{Vulnerability}\\\textbf{F1}} & \shortstack{\textbf{Macro}\\\textbf{F1}} & \shortstack{\textbf{Overall}\\\textbf{F1}} \\
+\midrule
+BERT-base, cross-entropy (TSTEM setup) & 0.482 \textpm{} 0.241 & 0.588 \textpm{} 0.067 & 0.645 \textpm{} 0.022 \\
+BERT-base + Focal Loss & 0.560 \textpm{} 0.115 & 0.624 \textpm{} 0.020 & 0.665 \textpm{} 0.014 \\
+SecureBERT + Focal Loss ($\gamma$ = 2) & 0.307 \textpm{} 0.337 & 0.649 \textpm{} 0.072 & 0.749 \textpm{} 0.010 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The overall F1 score increased substantially when comparing the base model to SecureBERT with Focal Loss (delta = +0.104, t = 13.61, p = 2.6x10-7). The increase in overall F1 with three seeds was similar (+0.101), indicating that the improvement was not due to the amount of seeds used. While the trend for Macro F1 showed a positive direction (p = 0.079), it was not statistically significant. Additionally, there was no improvement in Vulnerability F1 (p = 0.224). Therefore, using Focal Loss on SecureBERT does not address the issue of the minority class, but Section IV-C will demonstrate what works.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.0}
+\caption{PAIRED T-TEST ACROSS TEN SEEDS: BASELINE VS. SECUREBERT + FOCAL LOSS}
+\label{tab:II}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{1.8pt}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+\textbf{Metric} & \textbf{Baseline} & \shortstack{\textbf{SecureBERT +}\\\textbf{Focal}} & \textbf{$\Delta$} & \textbf{\textit{t}} & \textbf{\textit{p}} & \textbf{Significant} \\
+\midrule
+Overall F1 & 0.645 & 0.749 & +0.104 & 13.61 & 2.6 $\times$ 10$^{-7}$ & Yes \\
+Macro F1 & 0.588 & 0.649 & +0.061 & 1.98 & 0.079 & No (trend) \\
+Vulnerability F1 & 0.482 & 0.307 & \textminus{}0.176 & \textminus{}1.31 & 0.224 & No \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection*{4.3 Class-Imbalance Ablation}
+
+Table III provides a comparison of the five configurations from Section 3.6 of the SecureBERT paper (three different seeds; standard configuration).
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.0}
+\caption{IMBALANCE ABLATION ON SECUREBERT (MEAN \textpm{} STD, THREE SEEDS, P1)}
+\label{tab:III}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{1.5pt}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+\textbf{Strategy} & \shortstack{\textbf{Vuln}\\\textbf{F1}} & \shortstack{\textbf{Vuln}\\\textbf{P}} & \shortstack{\textbf{Vuln}\\\textbf{R}} & \shortstack{\textbf{Macro}\\\textbf{F1}} & \shortstack{\textbf{Overall}\\\textbf{F1}} & \shortstack{\textbf{Train}\\\textbf{size}} \\
+\midrule
+No mitigation (CE) & 0.000 \textpm{} 0.000 & 0.000 & 0.000 & 0.593 \textpm{} 0.010 & 0.755 \textpm{} 0.007 & 2,811 \\
++ Focal Loss & 0.283 \textpm{} 0.345 & 0.667 & 0.200 & 0.651 \textpm{} 0.073 & 0.756 \textpm{} 0.006 & 2,811 \\
++ Class weighting & 0.169 \textpm{} 0.022 & 0.100 & 0.533 & 0.410 \textpm{} 0.016 & 0.461 \textpm{} 0.021 & 2,811 \\
++ Augmentation & 0.705 \textpm{} 0.105 & 0.944 & 0.567 & 0.731 \textpm{} 0.019 & 0.755 \textpm{} 0.007 & 3,011 \\
++ Oversampling & 0.822 \textpm{} 0.021 & 0.896 & 0.767 & 0.759 \textpm{} 0.017 & 0.760 \textpm{} 0.016 & 2,881 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Unmitigated SecureBERT had an F1 score for vulnerabilities of 0.000 across each of the three seeds, therefore that score, not TSTEM's 0.48 score for BERT-base, should be used as the benchmark. The model has only 48 training entities and 10 testing entities and therefore the class was never learned. The model rejected class weighting because while recall increased to 0.533, precision decreased to 0.100 and overall F1 collapsed from 0.755 to 0.461. Augmentation reaches 0.705 with precision 0.944 and recall 0.567; synthetic CVE sentences can be recognized easily, however, they do not match the real language. Oversampling has the highest performance in terms of all metrics, and it also had the smallest spread (Vulnerability F1 0.822 \textpm{} 0.021), despite only increasing the size of the training data set by approximately 2.5\%. Imbalance for this class is a data problem rather than a loss-function problem.
+
+\subsection*{4.4 Matched Comparison With Oversampling}
+
+Section 4.3 evaluated oversampling for only SecureBERT. To see if the encoder continues to be important after applying the same fix to each model, both encoders were trained using oversampling (k=3) on ten random seeds, first in their standard configuration (Table IV) and second in their modified configuration (Table V).
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.0}
+\caption{BERT-BASE VS. SECUREBERT, BOTH WITH OVERSAMPLING (P1, DEFAULT REGIME, TEN SEEDS)}
+\label{tab:IV}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{1.8pt}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Metric} & \shortstack{\textbf{BERT +}\\\textbf{oversampling}} & \shortstack{\textbf{SecureBERT +}\\\textbf{oversampling}} & \textbf{$\Delta$} & \shortstack{\textbf{\textit{p}}\\\textbf{(paired)}} & \shortstack{\textbf{SecureBERT}\\\textbf{higher}} \\
+\midrule
+Overall F1 & 0.650 \textpm{} 0.010 & 0.754 \textpm{} 0.009 & +0.105 & 2.0 $\times$ 10$^{-9}$ & 10/10 \\
+Macro F1 & 0.633 \textpm{} 0.024 & 0.747 \textpm{} 0.019 & +0.113 & 3.4 $\times$ 10$^{-7}$ & 10/10 \\
+Malware & 0.731 \textpm{} 0.017 & 0.851 \textpm{} 0.009 & +0.120 & 1.1 $\times$ 10$^{-7}$ & 10/10 \\
+Indicator & 0.724 \textpm{} 0.019 & 0.830 \textpm{} 0.008 & +0.106 & 4.7 $\times$ 10$^{-8}$ & 10/10 \\
+Organization & 0.478 \textpm{} 0.035 & 0.646 \textpm{} 0.042 & +0.168 & 7.1 $\times$ 10$^{-6}$ & 10/10 \\
+System & 0.545 \textpm{} 0.011 & 0.617 \textpm{} 0.008 & +0.073 & 1.0 $\times$ 10$^{-8}$ & 10/10 \\
+Vulnerability & 0.690 \textpm{} 0.114 & 0.788 \textpm{} 0.070 & +0.098 & 0.016 & 7/10 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.0}
+\caption{BERT-BASE VS. SECUREBERT, BOTH WITH OVERSAMPLING (P1, TUNED REGIME, TEN SEEDS)}
+\label{tab:V}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{1.8pt}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Metric} & \shortstack{\textbf{BERT +}\\\textbf{oversampling}} & \shortstack{\textbf{SecureBERT +}\\\textbf{oversampling}} & \textbf{$\Delta$} & \shortstack{\textbf{\textit{p}}\\\textbf{(paired)}} & \shortstack{\textbf{SecureBERT}\\\textbf{higher}} \\
+\midrule
+Overall F1 & 0.683 \textpm{} 0.006 & 0.768 \textpm{} 0.008 & +0.085 & 1.5 $\times$ 10$^{-10}$ & 10/10 \\
+Macro F1 & 0.684 \textpm{} 0.022 & 0.759 \textpm{} 0.019 & +0.076 & 1.3 $\times$ 10$^{-6}$ & 10/10 \\
+Malware & 0.740 \textpm{} 0.024 & 0.859 \textpm{} 0.018 & +0.119 & 3.0 $\times$ 10$^{-7}$ & 10/10 \\
+Indicator & 0.767 \textpm{} 0.019 & 0.834 \textpm{} 0.010 & +0.067 & 5.7 $\times$ 10$^{-6}$ & 10/10 \\
+Organization & 0.542 \textpm{} 0.028 & 0.685 \textpm{} 0.026 & +0.143 & 2.9 $\times$ 10$^{-7}$ & 10/10 \\
+System & 0.583 \textpm{} 0.009 & 0.637 \textpm{} 0.016 & +0.053 & 1.1 $\times$ 10$^{-5}$ & 10/10 \\
+Vulnerability & 0.786 \textpm{} 0.101 & 0.783 \textpm{} 0.087 & \textminus{}0.002 & 0.94 & 5/10 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+SecureBERT has a significant advantage over other methods in terms of overall F1, macro F1 and each of the four majority classes across both regimes; also, SecureBERT wins against each seed. In regards to vulnerability, the default regime provides an advantage for SecureBERT (p = 0.016), however, the tuning of the model results in a tie between the two encoders (0.786 vs 0.783, p = 0.94), because longer training lets BERT catch up on the rare class.
+
+A possible interpretation is that oversampling improves performance of the minority class on both types of encoders, whereas domain adaptation provides improvement across all other metrics. Of the proposed approaches, SecureBERT with oversampling during tuning produces the highest average F1 score (0.768) and average macro F1 score (0.759) across ten runs when evaluated against the official protocol. Additionally, SecureBERT with oversampling during tuning produced a Vulnerability F1 score of 0.783 \textpm{} 0.087, which is superior to the 0.000 produced by un-mitigated SecureBERT.
+
+\subsection*{4.5 Final Model and Error Analysis}
+
+SecureBERT has been trained with oversampling in the tuned regime at seed 42 (285 s). This saved model can be found in Table VI as evaluated on the 936 gold entities of the official test split. However, because this was a single run, the ten-seed mean reported in Table V should be used when citing.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.0}
+\caption{PER-CLASS SCORES OF THE SAVED MODEL ON THE CYNER TEST SPLIT (P1)}
+\label{tab:VI}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Type} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{Support} \\
+\midrule
+Indicator & 0.845 & 0.817 & 0.831 & 301 \\
+Malware & 0.808 & 0.884 & 0.844 & 242 \\
+Organization & 0.689 & 0.612 & 0.648 & 134 \\
+System & 0.709 & 0.655 & 0.681 & 249 \\
+Vulnerability & 1.000 & 0.800 & 0.889 & 10 \\
+Micro average & 0.781 & 0.762 & 0.771 & 936 \\
+Macro average & 0.810 & 0.754 & 0.779 & 936 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Fig. 1 illustrates the confusion matrix. The most significant error is a false negative (or miss), as opposed to a false positive (or type swap). The most significant amount of the non-diagonal elements in the matrix for each gold type is put into the external class ``O.'' In regards to Vulnerability, 30.8\% of gold tokens are left off the list and no errors were made in identifying them as any of the other types, therefore the precision was 1.000. Organization and System are currently the two most fragile classes; each has lost approximately 25\% of its tokens to O (Organization lost 25.4\% and System lost 25.7\%). The only large types that have been misidentified are Organization as Malware (7.3\%) and Organization as System (5.2\% and 3.8\%), as would be anticipated when a company's brand name (Cisco) is included in its product name (Cisco ASA). After oversampling, the NER bottleneck moves from Vulnerability to Organization and System.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.62\columnwidth]{fig1_confusion_matrix.png}
+\caption{Confusion matrix of the saved SecureBERT + oversampling model on the CyNER test split, row-normalized by gold type. File: results/confusion\_matrix.png.}
+\label{fig:cm}
+\end{figure}
+
+\subsection*{4.6 Comparison With TSTEM Under Its Own Protocol}
+
+Before the protocol was matched, our BERT-base replication agreed with TSTEM only on Vulnerability. Under P1, the BERT base replication had a malware F1 of 0.754 and organization F1 of 0.501 (at token-level), which were both significantly lower than TSTEM's malware F1 of 0.90 and organization F1 of 0.84. This discrepancy results from two different protocols as described in section 3.7.
+
+Table VII also shows how well our proposed recipe performs relative to TSTEM's Table 6 under P2. When run using P2, it's very similar to TSTEM in terms of token accuracy: we have a token accuracy of 98.46\%, while TSTEM has a token accuracy of 98.74\%. Also, our per-class F1 scores are close to those of TSTEM (Malware 0.887, Indicator 0.934, System 0.810).
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.0}
+\caption{PER-CLASS TOKEN-LEVEL F1 UNDER THE TSTEM PROTOCOL (P2, TEN RANDOM SPLITS)}
+\label{tab:VII}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{1.0pt}
+\begin{tabular}{@{}lcccc>{\centering\arraybackslash}p{0.56in}@{}}
+\toprule
+\textbf{Class} & \textbf{TSTEM [1]} & \shortstack{\textbf{BERT-base, CE}\\\textbf{(reproduced)}} & \shortstack{\textbf{SecureBERT +}\\\textbf{oversampling}\\\textbf{(proposed)}} & \shortstack{\textbf{Seeds above}\\\textbf{TSTEM}} & \shortstack{\textbf{\textit{p}}\\\textbf{(one-sided)}} \\
+\midrule
+Malware & 0.90 & 0.887 \textpm{} 0.015 & 0.927 \textpm{} 0.007 & 10/10 & 3.5 $\times$ 10$^{-7}$ \\
+Indicator & 0.84 & 0.934 \textpm{} 0.010 & 0.949 \textpm{} 0.011 & 10/10 & 9.3 $\times$ 10$^{-11}$ \\
+Organization & 0.84 & 0.760 \textpm{} 0.042 & 0.807 \textpm{} 0.033 & 1/10 & 0.99 (not higher) \\
+System & 0.73 & 0.810 \textpm{} 0.025 & 0.842 \textpm{} 0.021 & 10/10 & 1.9 $\times$ 10$^{-8}$ \\
+Vulnerability & 0.48 & 0.396 \textpm{} 0.164 & 0.642 \textpm{} 0.157 & 9/10 & 0.005 \\
+Macro & 0.758 & 0.757 \textpm{} 0.037 & 0.833 \textpm{} 0.028 & 10/10 & 6.3 $\times$ 10$^{-6}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The new recipe is much higher in all metrics except Organization. It has a token accuracy of 98.8\% vs. TSTEM's 98.74\%. The BERT baseline results in a 0.396 on vulnerability, which is very similar to TSTEM's 0.48, thus indicating that TSTEM's poor performance on minority classes is due to class imbalance rather than a poor implementation.
+
+On the official split (P1, token level), our advantages over TSTEM's results continue for Vulnerability (0.747 \textpm{} 0.062, 10/10 seeds > 0.48), Indicator (0.891 \textpm{} 0.025, 10/10 seeds > 0.84), and macro F1 (0.782 \textpm{} 0.018, 8/10 seeds > 0.758). However, we are unable to maintain our advantage for Malware (0.858), Organization (0.694), or System (0.719), as these classes require name memorization and the official split does not provide any reward for reports being split across sides.
+
+\subsection*{4.8 IoC Correlation}
+
+The saved model was applied to the 80 articles that comprise the corpus described in Section 3.2. After application of the confidence, length, IoC patterns, and hub filtering, there were 1,349 entity references remaining. These were reduced to 1,111 distinct IoC nodes. The resultant graph contained 39,590 total edges (22,304 of which represent relationships between documents, while the remaining 17,286 relate to temporal connections). The degree of coverage was 99.9\%. All but one of the 1,111 IoC nodes were connected; the single unconnected node represents a Crowdstrike product name. Comparison of the isolated-IoC view against the correlated graph can be seen in Fig. 2.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.9\columnwidth]{fig2_before_after.png}
+\caption{Isolated IoCs (left) versus the correlated campaign graph (right) on the 80-article corpus. Node colour indicates entity type. File: data/correlation/before\_after.png.}
+\label{fig:corr}
+\end{figure}
+
+Coverage alone is a weak measurement, so Table IX compares Louvain with connected components on the same graph.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.0}
+\caption{LOUVAIN VERSUS CONNECTED COMPONENTS ON THE SAME GRAPH}
+\label{tab:IX}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{1.8pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Method} & \textbf{Clusters} & \shortstack{\textbf{Five largest}\\\textbf{sizes}} & \shortstack{\textbf{Share of}\\\textbf{largest}} & \textbf{Modularity} \\
+\midrule
+Louvain (used) & 10 & 209, 189, 146, 127, 111 & 18.8\% & 0.785 \\
+Connected components & 2 & 1,106, 4 & 99.5\% & 0.0004 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The connected components reduce the dense co-occurrence graph to a single large component with modularity 0.0004, which has essentially no structure. Louvain identifies 10 communities in the graph with modularity 0.785, significantly above the modularity value of 0.3 typically associated with significant modular structure. Earlier efforts to determine a credible number of clusters through adjusting the hub filter generated numbers ranging from 4 to 28, thus indicating that the number of clusters identified was simply an artifact of the threshold.
+
+Each communities are thematically coherent. Community C3 (146 nodes) represents the best example; it contains links to 69 indicators (44 MD5 hashes and 25 file names) associated with Cloud Atlas and CVE-2018-0802 (Microsoft Equation Editor exploit), an exploit that has historically been used by Cloud Atlas. In addition, each reporting organization within this community (Check Point, Cyber Threat Alliance) correlates with the available documentation on the use of this exploit. C2 (189 nodes) includes the ransomware families 8Base and Akira and their associated initial access CVEs, such as React2Shell (CVE-2025-55182) and F5 BIG-IP vulnerabilities. C1 (209 nodes) includes the botnet and infostealer families and PwnKit (CVE-2021-4034) and Looney Tunables (CVE-2023-4911). Many of the other nodes are company names that have no relationship other than sharing one crawl date. C5 (111 nodes) is made up of CrowdStrike products that were crawled on the same day, which indicates that these were published around the same time and therefore have no historical connection.
+
+This layer provides a campaign view of the data, which is different from what an IoC list would provide, however, this layer does not take away from attribution. There are still residual NER errors (e.g., product names identified as malware; duplicates), therefore the analysis presented in the case study was conducted qualitatively. Additionally, the quality of the correlation is directly related to how well the data has been extracted; using a basic sub-word aggregation method, the analysis resulted in 146 Malware nodes, however, there were zero Indicator nodes as a result of fragmentation of hashes and IP addresses and subsequent removal due to the length filter. On the other hand, when the analysis utilized the maximum aggregation method, it was able to recover all 46 MD5 hashes from a single article published in Securelist that had previously not contributed any hashes.
+
+Graph construction took 0.307 seconds to create 80 document graphs (3.8 milliseconds per document, and 0.23 milliseconds per entity). Temporal edges consume approximately 86 percent of the total time as they require comparing each pair of nodes (O(n\textsuperscript{2})). The millisecond figures suggest a light-weight approach with about 1,100 nodes, but larger corpora will likely need time-window indexing.. Neo4j was not running during the experiments, therefore the graph was created in GraphML format (Section 3.8).
+
+There are four points that link the tables together. First, domain adaptation increased the overall entity F1 score from 0.645 to 0.749 (p = 2.6 x 10-7) and was the most stable arm on this metric, but it does not, on its own, learn Vulnerability. The second point of interest is that Focal Loss achieves 0.000 on four of ten seeds in contrast, oversampling results in an increase in Vulnerability F1 from 0.000 to 0.822 when applied in isolation and to 0.783 \textpm{} 0.087 when averaged across all ten seeds. As soon as both encoder models utilize oversampling and are tuned identically, they will achieve identical scores for Vulnerability; therefore, any improvement in performance on the minority class is due to oversampling and any improved performance on other classes can be attributed to SecureBERT. A final area of concern relates to whether we can outperform TSTEM. Our ability to do so relies upon applying TSTEM's test. If we apply TSTEM's testing procedure, we find that our recipe is superior on four classes and on average, but inferior on Organization. However, if we apply the more rigid official testing protocol, our clear advantages lie with Vulnerability and Indicator. Finally, a tokenization detail (simple versus max subword aggregation) once removed every Indicator from the graph; after that fix, Louvain finds real structure (modularity 0.785) where connected components find none (0.0004). The two research questions are therefore one pipeline: without precise extraction, the correlation layer has nothing reliable to link. Various post-hoc adjustments (e.g., higher oversampling factors, logit biasing, rule-based matching, and ensembling) were evaluated but yielded no statistically significant improvement, as performance remains bounded by the intrinsic scarcity of training examples and trade-offs with false positives.
+
+\section*{V. CONCLUSION}
+
+The current study replicated the TSTEM NER baseline on CyNER (Vulnerability F1 0.482 \textpm{} 0.241, 10 seeds) and compared the results to SecureBERT using a similar experimental protocol [1].
+
+The use of domain adaptation increased the aggregation of extracted entities (RQ1): SecureBERT's total F1 score increased from 0.645 to 0.749 (t = 13.61, p = 2.6 x 10-7). Even after applying the same imbalance correction to each encoder, the performance of SecureBERT remained superior. SecureBERT was significantly better in terms of total F1 (0.768 vs. 0.683), macro F1 (0.759 vs. 0.684), and all four majority classes across all seeds, when the tuned models were trained using oversampling.
+
+The minority class is a data problem (RQ1). Focal Loss was not a good solution. Across ten seeds it performed slightly poorer than the baseline. In fact, on four seeds, it scored zero. On the other hand, random oversampling was the best technique. Random oversampling improved SecureBERT's Vulnerability F1 score from zero to 0.822 (ablation) and to 0.783 \textpm{} 0.087 across ten seeds of the official split. Since BERT-base achieves similar Vulnerability scores when using the same random oversampling and tuning techniques, we can assume that the increase in minority class performance was caused by random oversampling, not by the encoder itself..
+
+Under TSTEM's own protocol, the proposed approach significantly outperforms TSTEM's published F1 scores for malware (0.927), indicators (0.949), systems (0.842), vulnerabilities (0.642) and macro F1 (0.833). However, the performance is lower than TSTEM's published F1 for organizations (0.807 vs. 0.840).
+
+Correlation is inexpensive and possible (RQ2). In the heuristic layer, 1,111 separate IoCs from 80 articles were organized into 10 groups of IoCs (modularity 0.785), with 99.9\% coverage of all documents, and 3.8 ms of overhead per document. The strongest link between groups included several dozen hashes related to Cloud Atlas and CVE-2018-0802. This relationship could also be validated by reviewing the relevant threat intelligence literature.
+
+The limits are based on the design. SecureBERT is based on RoBERTa, whereas the baseline is based on BERT. Thus, the pretraining for each domain is not completely separate from the architecture. There are 48 training mentions and approximately 10 testing mentions in the Vulnerability category. Because of this small sample size, the F1 score will be quantized, and the variability between runs will be large despite using ten seeds. TSTEM's random splits are based upon 60\% of test entity strings being present in training. Data-wise, 20 out of 80 articles had no verifiable publication date so they were omitted from the temporal edges, Unit 42 produced 4 articles and Mandiant could not be scraped using Scrapy. NER is trained on CyNER report sentences and applied to blog prose. This creates a co-occurrence property graph rather than a STIX 2.1 graph and does not map to MITRE ATT\&CK.
+
+The use of a general-purpose RoBERTa control model as well as CySecBERT will allow for an isolated comparison of the effects of domain pretraining [8]. The NER task is currently limited by both organization and system constraints; vendor-versus-product classification as well as additional labeled training data offer greater potential than continued loss optimization. Recalling vulnerability information is restricted by descriptive vulnerability phrases rather than CVE identification tags. Expanding the scope of the graph to include more sources through the development of a JavaScript-capable web crawler, using time-window index based temporal correlations to provide manageable analysis of temporal correlations in larger graphs, and exporting mapped ATT\&CK data to STIX 2.1 format to allow integration with existing cyber threat intelligence (CTI) tools.
+
+\begin{thebibliography}{00}
+\bibitem{b1} Balasubramanian et al., ``A cognitive platform for collecting cyber threat intelligence and real-time detection using cloud computing,'' \textit{Decision Analytics Journal}, vol. 14, 2025.
+
+\bibitem{b2} K. Satvat, R. Gjomemo, and V. N. Venkatakrishnan, ``EXTRACTOR: Extracting attack behavior from threat reports,'' in \textit{Proc. IEEE European Symp. Security and Privacy (EuroS\&P)}, 2021.
+
+\bibitem{b3} E. Aghaei, X. Niu, W. Shadid, and E. Al-Shaer, ``SecureBERT: A domain-specific language model for cybersecurity,'' arXiv:2204.02685, 2022.
+
+\bibitem{b4} A. Villalón-Huerta, I. Ripoll-Ripoll, and H. Marco-Gisbert, ``Key requirements for the detection and sharing of behavioral indicators of compromise,'' \textit{Electronics}, vol. 11, no. 4, art. 652, 2022.
+
+\bibitem{b5} B. Kim and P. B. Lowry, ``A review and theoretical explanation of the `cyberthreat-intelligence (CTI) capability' that needs to be fostered in information security professionals and managers,'' \textit{Computers \& Security}, 2020.
+
+\bibitem{b6} D. R. Arikkat et al., ``CTI dataset construction from Telegram,'' arXiv:2509.20943, 2025.
+
+\bibitem{b7} N. Sun, M. Ding, J. Jiang, W. Xu, X. Mo, Y. Tai, and J. Zhang, ``Cyber threat intelligence mining for proactive cybersecurity defense: A survey and new perspectives,'' \textit{IEEE Communications Surveys \& Tutorials}, 2023.
+
+\bibitem{b8} M. Bayer, P. Kuehn, R. Shanehsaz, and C. Reuter, ``CySecBERT: A domain-adapted language model for the cybersecurity domain,'' \textit{ACM Trans. Privacy and Security}, vol. 27, no. 2, 2024.
+
+\bibitem{b9} S. Mittal, A. Joshi, and T. Finin, ``Cyber-All-Intel: An AI for security related threat intelligence,'' arXiv:1905.02895, 2019.
+
+\bibitem{b10} M. T. Alam, D. Bhusal, Y. Park, and N. Rastogi, ``CyNER: A Python library for cybersecurity named entity recognition,'' arXiv:2204.05754, 2022.
+
+\bibitem{b11} T.-Y. Lin, P. Goyal, R. Girshick, K. He, and P. Dollár, ``Focal loss for dense object detection,'' in \textit{Proc. IEEE Int. Conf. Computer Vision (ICCV)}, 2017, pp. 2980--2988.
+
+\bibitem{b12} V. D. Blondel, J.-L. Guillaume, R. Lambiotte, and E. Lefebvre, ``Fast unfolding of communities in large networks,'' \textit{J. Statistical Mechanics: Theory and Experiment}, vol. 2008, no. 10, p. P10008, 2008.
+\end{thebibliography}
+
+\end{document}

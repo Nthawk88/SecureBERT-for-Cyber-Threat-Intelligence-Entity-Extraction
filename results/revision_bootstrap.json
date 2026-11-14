@@ -1,0 +1,658 @@
+{
+ "table1_default_focal": {
+  "baseline_ce": {
+   "vuln_f1": {
+    "mean": 0.482,
+    "ci": [
+     0.332,
+     0.612
+    ]
+   },
+   "macro_f1": {
+    "mean": 0.588,
+    "ci": [
+     0.546,
+     0.623
+    ]
+   },
+   "overall_f1": {
+    "mean": 0.645,
+    "ci": [
+     0.632,
+     0.658
+    ]
+   }
+  },
+  "baseline_focal": {
+   "vuln_f1": {
+    "mean": 0.56,
+    "ci": [
+     0.494,
+     0.627
+    ]
+   },
+   "macro_f1": {
+    "mean": 0.624,
+    "ci": [
+     0.612,
+     0.636
+    ]
+   },
+   "overall_f1": {
+    "mean": 0.665,
+    "ci": [
+     0.656,
+     0.673
+    ]
+   }
+  },
+  "securebert_focal": {
+   "vuln_f1": {
+    "mean": 0.307,
+    "ci": [
+     0.119,
+     0.511
+    ]
+   },
+   "macro_f1": {
+    "mean": 0.649,
+    "ci": [
+     0.609,
+     0.694
+    ]
+   },
+   "overall_f1": {
+    "mean": 0.749,
+    "ci": [
+     0.743,
+     0.754
+    ]
+   }
+  },
+  "securebert_focal_minus_baseline_ce": {
+   "vuln_f1": {
+    "diff": -0.176,
+    "ci": [
+     -0.41,
+     0.079
+    ]
+   },
+   "macro_f1": {
+    "diff": 0.061,
+    "ci": [
+     0.005,
+     0.118
+    ]
+   },
+   "overall_f1": {
+    "diff": 0.104,
+    "ci": [
+     0.09,
+     0.118
+    ]
+   }
+  }
+ },
+ "table4_default_os": {
+  "overall_f1": {
+   "A_mean": 0.65,
+   "A_ci": [
+    0.644,
+    0.656
+   ],
+   "B_mean": 0.754,
+   "B_ci": [
+    0.749,
+    0.76
+   ],
+   "diff_B_minus_A": 0.105,
+   "diff_ci": [
+    0.097,
+    0.113
+   ]
+  },
+  "macro_f1": {
+   "A_mean": 0.633,
+   "A_ci": [
+    0.62,
+    0.647
+   ],
+   "B_mean": 0.747,
+   "B_ci": [
+    0.735,
+    0.757
+   ],
+   "diff_B_minus_A": 0.113,
+   "diff_ci": [
+    0.098,
+    0.13
+   ]
+  },
+  "Malware_f1": {
+   "A_mean": 0.731,
+   "A_ci": [
+    0.722,
+    0.742
+   ],
+   "B_mean": 0.851,
+   "B_ci": [
+    0.846,
+    0.857
+   ],
+   "diff_B_minus_A": 0.12,
+   "diff_ci": [
+    0.105,
+    0.134
+   ]
+  },
+  "Indicator_f1": {
+   "A_mean": 0.724,
+   "A_ci": [
+    0.713,
+    0.735
+   ],
+   "B_mean": 0.83,
+   "B_ci": [
+    0.826,
+    0.835
+   ],
+   "diff_B_minus_A": 0.106,
+   "diff_ci": [
+    0.095,
+    0.119
+   ]
+  },
+  "Organization_f1": {
+   "A_mean": 0.478,
+   "A_ci": [
+    0.458,
+    0.499
+   ],
+   "B_mean": 0.646,
+   "B_ci": [
+    0.621,
+    0.67
+   ],
+   "diff_B_minus_A": 0.168,
+   "diff_ci": [
+    0.134,
+    0.202
+   ]
+  },
+  "System_f1": {
+   "A_mean": 0.545,
+   "A_ci": [
+    0.538,
+    0.551
+   ],
+   "B_mean": 0.617,
+   "B_ci": [
+    0.612,
+    0.622
+   ],
+   "diff_B_minus_A": 0.073,
+   "diff_ci": [
+    0.067,
+    0.08
+   ]
+  },
+  "Vulnerability_f1": {
+   "A_mean": 0.69,
+   "A_ci": [
+    0.625,
+    0.757
+   ],
+   "B_mean": 0.788,
+   "B_ci": [
+    0.743,
+    0.823
+   ],
+   "diff_B_minus_A": 0.098,
+   "diff_ci": [
+    0.037,
+    0.161
+   ]
+  }
+ },
+ "table5_tuned_os": {
+  "overall_f1": {
+   "A_mean": 0.683,
+   "A_ci": [
+    0.68,
+    0.687
+   ],
+   "B_mean": 0.768,
+   "B_ci": [
+    0.764,
+    0.773
+   ],
+   "diff_B_minus_A": 0.085,
+   "diff_ci": [
+    0.08,
+    0.089
+   ]
+  },
+  "macro_f1": {
+   "A_mean": 0.684,
+   "A_ci": [
+    0.67,
+    0.695
+   ],
+   "B_mean": 0.759,
+   "B_ci": [
+    0.748,
+    0.771
+   ],
+   "diff_B_minus_A": 0.076,
+   "diff_ci": [
+    0.064,
+    0.089
+   ]
+  },
+  "Malware_f1": {
+   "A_mean": 0.74,
+   "A_ci": [
+    0.725,
+    0.753
+   ],
+   "B_mean": 0.859,
+   "B_ci": [
+    0.849,
+    0.869
+   ],
+   "diff_B_minus_A": 0.119,
+   "diff_ci": [
+    0.103,
+    0.135
+   ]
+  },
+  "Indicator_f1": {
+   "A_mean": 0.767,
+   "A_ci": [
+    0.756,
+    0.778
+   ],
+   "B_mean": 0.834,
+   "B_ci": [
+    0.828,
+    0.84
+   ],
+   "diff_B_minus_A": 0.067,
+   "diff_ci": [
+    0.054,
+    0.08
+   ]
+  },
+  "Organization_f1": {
+   "A_mean": 0.542,
+   "A_ci": [
+    0.525,
+    0.558
+   ],
+   "B_mean": 0.685,
+   "B_ci": [
+    0.67,
+    0.7
+   ],
+   "diff_B_minus_A": 0.143,
+   "diff_ci": [
+    0.124,
+    0.162
+   ]
+  },
+  "System_f1": {
+   "A_mean": 0.583,
+   "A_ci": [
+    0.578,
+    0.589
+   ],
+   "B_mean": 0.637,
+   "B_ci": [
+    0.627,
+    0.646
+   ],
+   "diff_B_minus_A": 0.053,
+   "diff_ci": [
+    0.041,
+    0.064
+   ]
+  },
+  "Vulnerability_f1": {
+   "A_mean": 0.786,
+   "A_ci": [
+    0.721,
+    0.838
+   ],
+   "B_mean": 0.783,
+   "B_ci": [
+    0.732,
+    0.835
+   ],
+   "diff_B_minus_A": -0.002,
+   "diff_ci": [
+    -0.06,
+    0.057
+   ]
+  }
+ },
+ "p1_token_securebert_os": {
+  "Malware": {
+   "mean": 0.858,
+   "ci": [
+    0.848,
+    0.868
+   ],
+   "tstem": 0.9
+  },
+  "Indicator": {
+   "mean": 0.891,
+   "ci": [
+    0.876,
+    0.905
+   ],
+   "tstem": 0.84
+  },
+  "Organization": {
+   "mean": 0.694,
+   "ci": [
+    0.674,
+    0.716
+   ],
+   "tstem": 0.84
+  },
+  "System": {
+   "mean": 0.719,
+   "ci": [
+    0.71,
+    0.728
+   ],
+   "tstem": 0.73
+  },
+  "Vulnerability": {
+   "mean": 0.747,
+   "ci": [
+    0.711,
+    0.784
+   ],
+   "tstem": 0.48
+  },
+  "macro": {
+   "mean": 0.782,
+   "ci": [
+    0.771,
+    0.792
+   ],
+   "tstem": 0.758
+  }
+ },
+ "p2_securebert_os": {
+  "Malware": {
+   "mean": 0.927,
+   "ci": [
+    0.922,
+    0.931
+   ],
+   "tstem": 0.9
+  },
+  "Indicator": {
+   "mean": 0.949,
+   "ci": [
+    0.942,
+    0.955
+   ],
+   "tstem": 0.84
+  },
+  "Organization": {
+   "mean": 0.808,
+   "ci": [
+    0.788,
+    0.826
+   ],
+   "tstem": 0.84
+  },
+  "System": {
+   "mean": 0.842,
+   "ci": [
+    0.829,
+    0.854
+   ],
+   "tstem": 0.73
+  },
+  "Vulnerability": {
+   "mean": 0.642,
+   "ci": [
+    0.548,
+    0.732
+   ],
+   "tstem": 0.48
+  },
+  "macro": {
+   "mean": 0.833,
+   "ci": [
+    0.817,
+    0.85
+   ],
+   "tstem": 0.758
+  }
+ },
+ "p2_bert_ce": {
+  "Malware": {
+   "mean": 0.887,
+   "ci": [
+    0.878,
+    0.896
+   ],
+   "tstem": 0.9
+  },
+  "Indicator": {
+   "mean": 0.934,
+   "ci": [
+    0.928,
+    0.94
+   ],
+   "tstem": 0.84
+  },
+  "Organization": {
+   "mean": 0.76,
+   "ci": [
+    0.735,
+    0.784
+   ],
+   "tstem": 0.84
+  },
+  "System": {
+   "mean": 0.81,
+   "ci": [
+    0.794,
+    0.823
+   ],
+   "tstem": 0.73
+  },
+  "Vulnerability": {
+   "mean": 0.396,
+   "ci": [
+    0.303,
+    0.494
+   ],
+   "tstem": 0.48
+  },
+  "macro": {
+   "mean": 0.757,
+   "ci": [
+    0.737,
+    0.78
+   ],
+   "tstem": 0.758
+  }
+ },
+ "p1_token_bert_ce": {
+  "Malware": {
+   "mean": 0.754,
+   "ci": [
+    0.738,
+    0.768
+   ],
+   "tstem": 0.9
+  },
+  "Indicator": {
+   "mean": 0.879,
+   "ci": [
+    0.868,
+    0.888
+   ],
+   "tstem": 0.84
+  },
+  "Organization": {
+   "mean": 0.501,
+   "ci": [
+    0.453,
+    0.549
+   ],
+   "tstem": 0.84
+  },
+  "System": {
+   "mean": 0.641,
+   "ci": [
+    0.631,
+    0.651
+   ],
+   "tstem": 0.73
+  },
+  "Vulnerability": {
+   "mean": 0.406,
+   "ci": [
+    0.278,
+    0.512
+   ],
+   "tstem": 0.48
+  },
+  "macro": {
+   "mean": 0.636,
+   "ci": [
+    0.6,
+    0.668
+   ],
+   "tstem": 0.758
+  }
+ },
+ "p2_paired_securebert_os_minus_bert_ce": {
+  "Malware": {
+   "diff": 0.04,
+   "ci": [
+    0.03,
+    0.05
+   ]
+  },
+  "Indicator": {
+   "diff": 0.015,
+   "ci": [
+    0.01,
+    0.021
+   ]
+  },
+  "Organization": {
+   "diff": 0.047,
+   "ci": [
+    0.029,
+    0.066
+   ]
+  },
+  "System": {
+   "diff": 0.032,
+   "ci": [
+    0.016,
+    0.048
+   ]
+  },
+  "Vulnerability": {
+   "diff": 0.246,
+   "ci": [
+    0.175,
+    0.333
+   ]
+  },
+  "macro": {
+   "diff": 0.076,
+   "ci": [
+    0.06,
+    0.095
+   ]
+  }
+ },
+ "vuln_boot_dist": {
+  "pcts": {
+   "1": 0.0,
+   "2.5": 0.0,
+   "5": 0.0,
+   "10": 0.0,
+   "25": 0.667,
+   "50": 0.875,
+   "75": 0.942,
+   "90": 1.0,
+   "97.5": 1.0
+  },
+  "share_zero": 0.141
+ },
+ "sentence_bootstrap_saved_model": {
+  "n_sentences": 748,
+  "resamples": 2000,
+  "scores": {
+   "Malware": {
+    "point": 0.844,
+    "ci": [
+     0.804,
+     0.879
+    ],
+    "resamples_with_support": 2000
+   },
+   "Indicator": {
+    "point": 0.831,
+    "ci": [
+     0.783,
+     0.875
+    ],
+    "resamples_with_support": 2000
+   },
+   "Organization": {
+    "point": 0.648,
+    "ci": [
+     0.57,
+     0.713
+    ],
+    "resamples_with_support": 2000
+   },
+   "System": {
+    "point": 0.681,
+    "ci": [
+     0.625,
+     0.731
+    ],
+    "resamples_with_support": 2000
+   },
+   "Vulnerability": {
+    "point": 0.889,
+    "ci": [
+     0.0,
+     1.0
+    ],
+    "resamples_with_support": 2000
+   },
+   "micro": {
+    "point": 0.771,
+    "ci": [
+     0.745,
+     0.796
+    ],
+    "resamples_with_support": 2000
+   },
+   "macro": {
+    "point": 0.779,
+    "ci": [
+     0.59,
+     0.81
+    ],
+    "resamples_with_support": 2000
+   }
+  }
+ }
+}

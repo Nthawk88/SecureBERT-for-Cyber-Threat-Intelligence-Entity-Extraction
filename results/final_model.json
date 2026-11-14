@@ -1,0 +1,70 @@
+{
+  "strategy": "oversample",
+  "seed": 42,
+  "epochs": 10,
+  "learning_rate": 5e-05,
+  "train_sentences": 2881,
+  "vuln_f1": 0.888888888888889,
+  "vuln_precision": 1.0,
+  "vuln_recall": 0.8,
+  "macro_f1": 0.7785914649115576,
+  "overall_f1": 0.7712276906435912,
+  "per_class": {
+    "Malware": {
+      "precision": 0.8075471698113208,
+      "recall": 0.8842975206611571,
+      "f1": 0.8441814595660749
+    },
+    "Indicator": {
+      "precision": 0.845360824742268,
+      "recall": 0.8172757475083057,
+      "f1": 0.8310810810810811
+    },
+    "Organization": {
+      "precision": 0.6890756302521008,
+      "recall": 0.6119402985074627,
+      "f1": 0.6482213438735178
+    },
+    "System": {
+      "precision": 0.7086956521739131,
+      "recall": 0.6546184738955824,
+      "f1": 0.6805845511482255
+    },
+    "Vulnerability": {
+      "precision": 1.0,
+      "recall": 0.8,
+      "f1": 0.888888888888889
+    }
+  },
+  "token_level": {
+    "Malware": {
+      "precision": 0.8316831683168316,
+      "recall": 0.8780487804878049,
+      "f1": 0.8542372881355932
+    },
+    "Indicator": {
+      "precision": 0.9762376237623762,
+      "recall": 0.8456260720411664,
+      "f1": 0.90625
+    },
+    "Organization": {
+      "precision": 0.7741935483870968,
+      "recall": 0.6217616580310881,
+      "f1": 0.689655172413793
+    },
+    "System": {
+      "precision": 0.8044871794871795,
+      "recall": 0.6802168021680217,
+      "f1": 0.7371512481644641
+    },
+    "Vulnerability": {
+      "precision": 1.0,
+      "recall": 0.6923076923076923,
+      "f1": 0.8181818181818181
+    }
+  },
+  "tok_macro_f1": 0.8010951053791336,
+  "tok_accuracy": 0.9790866632070576,
+  "train_seconds": 284.6,
+  "saved_to": "C:\\Users\\rico2\\OneDrive\\Dokumen\\Pritesis\\ThesisProject\\Prithesis New\\models\\securebert_ner"
+}

@@ -1,0 +1,135 @@
+{
+  "num_articles": 80,
+  "num_entities": 1349,
+  "min_confidence": 0.7,
+  "graph": {
+    "nodes": 1111,
+    "edges": 39590,
+    "document_edges": 22304,
+    "temporal_edges": 17286
+  },
+  "coverage": {
+    "total_iocs": 1111,
+    "correlated_iocs": 1110,
+    "isolated_iocs": 1,
+    "coverage_percentage": 99.91
+  },
+  "cluster_method": "louvain",
+  "resolution": 1.0,
+  "num_clusters": 10,
+  "modularity": 0.7849,
+  "comparison_method": {
+    "method": "components",
+    "num_clusters": 2,
+    "top_sizes": [
+      1106,
+      4
+    ],
+    "modularity": 0.0004
+  },
+  "top_clusters": [
+    {
+      "size": 209,
+      "num_edges": 9371,
+      "ioc_by_type": {
+        "Malware": 65,
+        "Organization": 65,
+        "System": 47,
+        "Vulnerability": 20,
+        "Indicator": 12
+      },
+      "sources": [
+        "bleepingcomputer",
+        "crowdstrike",
+        "securelist",
+        "talos",
+        "unit42"
+      ],
+      "first_seen": "2026-04-02T10:00:57+00:00",
+      "last_seen": "2026-05-30T00:49:52.489121+00:00"
+    },
+    {
+      "size": 189,
+      "num_edges": 2900,
+      "ioc_by_type": {
+        "Malware": 61,
+        "Indicator": 55,
+        "System": 30,
+        "Organization": 25,
+        "Vulnerability": 18
+      },
+      "sources": [
+        "bleepingcomputer",
+        "securelist",
+        "talos",
+        "unit42"
+      ],
+      "first_seen": "2025-12-02T10:07:03+00:00",
+      "last_seen": "2026-05-29T07:00:51+00:00"
+    },
+    {
+      "size": 146,
+      "num_edges": 9004,
+      "ioc_by_type": {
+        "Indicator": 69,
+        "Malware": 31,
+        "System": 29,
+        "Organization": 15,
+        "Vulnerability": 2
+      },
+      "sources": [
+        "crowdstrike",
+        "securelist",
+        "talos",
+        "unit42"
+      ],
+      "first_seen": "2026-04-02T10:00:57+00:00",
+      "last_seen": "2026-05-30T00:49:38.965547+00:00"
+    },
+    {
+      "size": 127,
+      "num_edges": 4927,
+      "ioc_by_type": {
+        "System": 64,
+        "Vulnerability": 56,
+        "Malware": 4,
+        "Organization": 3
+      },
+      "sources": [
+        "bleepingcomputer",
+        "crowdstrike",
+        "securelist",
+        "talos",
+        "unit42"
+      ],
+      "first_seen": "2026-04-02T10:00:57+00:00",
+      "last_seen": "2026-05-30T00:49:48.048344+00:00"
+    },
+    {
+      "size": 111,
+      "num_edges": 999,
+      "ioc_by_type": {
+        "System": 51,
+        "Malware": 24,
+        "Vulnerability": 18,
+        "Organization": 15,
+        "Indicator": 3
+      },
+      "sources": [
+        "crowdstrike"
+      ],
+      "first_seen": "2026-05-30T00:48:44.292903+00:00",
+      "last_seen": "2026-05-30T00:49:52.489121+00:00"
+    }
+  ],
+  "overhead": {
+    "num_documents": 80,
+    "num_entities": 1349,
+    "document_edges_mean_s": 0.04287072000001899,
+    "temporal_edges_mean_s": 0.26378639999993536,
+    "total_mean_s": 0.3066571199999544,
+    "per_document_ms": 3.8332139999994297,
+    "per_entity_ms": 0.22732180874718635
+  },
+  "neo4j": "neo4j-unavailable (ServiceUnavailable)"
+}

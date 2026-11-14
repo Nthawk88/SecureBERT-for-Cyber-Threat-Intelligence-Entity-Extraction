@@ -1,0 +1,175 @@
+{
+  "per_class": {
+    "Indicator": {
+      "precision": 0.845360824742268,
+      "recall": 0.8172757475083057,
+      "f1-score": 0.8310810810810811,
+      "support": 301
+    },
+    "Malware": {
+      "precision": 0.8075471698113208,
+      "recall": 0.8842975206611571,
+      "f1-score": 0.8441814595660749,
+      "support": 242
+    },
+    "Organization": {
+      "precision": 0.6890756302521008,
+      "recall": 0.6119402985074627,
+      "f1-score": 0.6482213438735178,
+      "support": 134
+    },
+    "System": {
+      "precision": 0.7086956521739131,
+      "recall": 0.6546184738955824,
+      "f1-score": 0.6805845511482255,
+      "support": 249
+    },
+    "Vulnerability": {
+      "precision": 1.0,
+      "recall": 0.8,
+      "f1-score": 0.888888888888889,
+      "support": 10
+    },
+    "micro avg": {
+      "precision": 0.7809419496166484,
+      "recall": 0.7617521367521367,
+      "f1-score": 0.7712276906435912,
+      "support": 936
+    },
+    "macro avg": {
+      "precision": 0.8101358553959205,
+      "recall": 0.7536264081145015,
+      "f1-score": 0.7785914649115576,
+      "support": 936
+    },
+    "weighted avg": {
+      "precision": 0.7785057427209916,
+      "recall": 0.7617521367521367,
+      "f1-score": 0.7688711760942778,
+      "support": 936
+    }
+  },
+  "summary": {
+    "overall_precision": 0.7809419496166484,
+    "overall_recall": 0.7617521367521367,
+    "overall_f1": 0.7712276906435912,
+    "macro_f1": 0.7785914649115576,
+    "Vulnerability_precision": 1.0,
+    "Vulnerability_recall": 0.8,
+    "Vulnerability_f1": 0.888888888888889
+  },
+  "confusion_matrix": [
+    [
+      17742,
+      11,
+      12,
+      40,
+      20,
+      0
+    ],
+    [
+      66,
+      493,
+      16,
+      7,
+      1,
+      0
+    ],
+    [
+      30,
+      1,
+      252,
+      4,
+      0,
+      0
+    ],
+    [
+      95,
+      0,
+      9,
+      251,
+      14,
+      0
+    ],
+    [
+      49,
+      0,
+      14,
+      10,
+      120,
+      0
+    ],
+    [
+      4,
+      0,
+      0,
+      0,
+      0,
+      9
+    ]
+  ],
+  "confusion_labels": [
+    "O",
+    "Indicator",
+    "Malware",
+    "System",
+    "Organization",
+    "Vulnerability"
+  ],
+  "ttests": {
+    "vuln_f1": {
+      "metric": "vuln_f1",
+      "n_seeds": 10,
+      "baseline_mean": 0.4821384008148713,
+      "baseline_std": 0.24086073777580486,
+      "candidate_mean": 0.30653709036061977,
+      "candidate_std": 0.33741315142271106,
+      "mean_improvement": -0.1756013104542516,
+      "t_statistic": -1.3061068220489087,
+      "p_value": 0.2239091489106393,
+      "df": 9,
+      "alpha": 0.05,
+      "significant": false,
+      "direction": "baseline_better"
+    },
+    "macro_f1": {
+      "metric": "macro_f1",
+      "n_seeds": 10,
+      "baseline_mean": 0.5880222745192494,
+      "baseline_std": 0.0671355718071596,
+      "candidate_mean": 0.6491840288845399,
+      "candidate_std": 0.07195170502874701,
+      "mean_improvement": 0.06116175436529059,
+      "t_statistic": 1.9802804904451037,
+      "p_value": 0.07902391422634966,
+      "df": 9,
+      "alpha": 0.05,
+      "significant": false,
+      "direction": "candidate_better"
+    },
+    "overall_f1": {
+      "metric": "overall_f1",
+      "n_seeds": 10,
+      "baseline_mean": 0.6453363412052016,
+      "baseline_std": 0.02238580981184255,
+      "candidate_mean": 0.7488418047910307,
+      "candidate_std": 0.009750227742678535,
+      "mean_improvement": 0.10350546358582924,
+      "t_statistic": 13.611671686987293,
+      "p_value": 2.614373066344316e-07,
+      "df": 9,
+      "alpha": 0.05,
+      "significant": true,
+      "direction": "candidate_better"
+    }
+  },
+  "phase3_overhead": {
+    "num_documents": 80,
+    "num_entities": 1349,
+    "document_edges_mean_s": 0.04287072000001899,
+    "temporal_edges_mean_s": 0.26378639999993536,
+    "total_mean_s": 0.3066571199999544,
+    "per_document_ms": 3.8332139999994297,
+    "per_entity_ms": 0.22732180874718635
+  }
+}
